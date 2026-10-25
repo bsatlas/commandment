@@ -9,12 +9,15 @@ import (
 	"github.com/abstractionsinc/commandment/cli"
 )
 
+func renderHelp(_ context.Context, page cli.HelpPage) (string, error) {
+	text := fmt.Sprintf("%s %s\n%s\n", strings.ToUpper(page.ApplicationName), page.Name, page.Description.Short)
+	return text, nil
+}
+
 var definition = cli.Definition[struct{}]{
 	Name: "alienctl",
 	Help: cli.HelpConfig{
-		Renderer: func(_ context.Context, page cli.HelpPage) (string, error) {
-			return fmt.Sprintf("%s %s\n%s\n", strings.ToUpper(page.ApplicationName), page.Name, page.Description.Short), nil
-		},
+		Renderer: renderHelp,
 	},
 	Declare: func(cb *cli.CommandBuilder[struct{}]) {
 		scanCmd := cli.Command[struct{}]{

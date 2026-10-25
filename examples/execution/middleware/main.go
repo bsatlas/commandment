@@ -16,13 +16,13 @@ type scanConfig struct {
 
 func scanMiddleware(ctx context.Context, cfg *scanConfig, next cli.MiddlewareNext) error {
 	if _, err := fmt.Fprintln(cfg.Output, "preparing sensors"); err != nil {
-		return err //nolint:wrapcheck // Preserve the writer error at the application boundary.
+		return fmt.Errorf("write middleware output: %w", err)
 	}
 	if err := next(ctx); err != nil {
 		return err
 	}
 	if _, err := fmt.Fprintln(cfg.Output, "recording scan"); err != nil {
-		return err //nolint:wrapcheck // Preserve the writer error at the application boundary.
+		return fmt.Errorf("write middleware output: %w", err)
 	}
 	return nil
 }
@@ -39,7 +39,7 @@ var definition = cli.Definition[struct{}]{
 			Middleware: []cli.Middleware[scanConfig]{scanMiddleware},
 			Run: func(_ context.Context, cfg *scanConfig) error {
 				if _, err := fmt.Fprintf(cfg.Output, "scanning %s\n", cfg.World); err != nil {
-					return err //nolint:wrapcheck // Preserve the writer error at the application boundary.
+					return fmt.Errorf("write middleware output: %w", err)
 				}
 				return nil
 			},

@@ -22,7 +22,7 @@ var definition = cli.Definition[struct{}]{
 				system.Long("system")
 				cb.Rule.Require(system)
 
-				cb.Subcommands.CommandsFrom(func(_ context.Context, batch *cli.CommandBatch[outpostConfig]) error {
+				provideOutposts := func(_ context.Context, batch *cli.CommandBatch[outpostConfig]) error {
 					switch batch.Config.System {
 					case "jovian":
 						europaCmd := cli.Command[struct{}]{
@@ -44,7 +44,8 @@ var definition = cli.Definition[struct{}]{
 						batch.Command(titanCmd)
 					}
 					return nil
-				}, system)
+				}
+				cb.Subcommands.CommandsFrom(provideOutposts, system)
 			},
 		}
 		cb.Subcommands.Command(outpostCmd)

@@ -53,7 +53,7 @@ func main() {
 	}
 	notify := func(_ context.Context, notice cli.Notice) error {
 		if _, err := fmt.Fprintf(os.Stderr, "warning: %s\n", notice.Message); err != nil {
-			return err //nolint:wrapcheck // Preserve the stderr writer error at the process boundary.
+			return fmt.Errorf("write advisory: %w", err)
 		}
 		return nil
 	}

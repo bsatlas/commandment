@@ -1,29 +1,36 @@
-# Commandment
+<h1 align="center">Commandment</h1>
 
-A declarative CLI framework for Go.
+<p align="center">
+  <strong>Declarative CLIs for Go.</strong><br>
+  Declare your CLI once. Compile one model for execution, Help, completion, diagnostics, tooling, host integration, and tests.
+</p>
 
-Declare your CLI once. Compile it into one model for execution, Help, completion, diagnostics, tooling, host integration, and tests.
+<p align="center">
+  <a href="#install"><strong>Install</strong></a> &middot;
+  <a href="docs/01-getting-started.md">Getting started</a> &middot;
+  <a href="docs/README.md">Documentation</a> &middot;
+  <a href="examples/README.md">Examples</a> &middot;
+  <a href="https://pkg.go.dev/github.com/abstractionsinc/commandment">GoDoc</a> &middot;
+  <a href="CONTRIBUTING.md">Contribute</a>
+</p>
 
-[Getting Started](docs/01-getting-started.md) | [Documentation](docs/README.md) | [Examples](examples/README.md)
-
-RC2 | Go 1.27.1 | module `github.com/abstractionsinc/commandment`
+<p align="center">
+  <a href="https://github.com/abstractionsinc/commandment/tree/v1.0.0-rc.2"><img src="https://img.shields.io/badge/Release-v1.0.0--rc.2-24292f" alt="Commandment v1.0.0-rc.2"></a>
+  <a href="go.mod"><img src="https://img.shields.io/badge/Go-1.27.1-00ADD8" alt="Go 1.27.1"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-24292f" alt="Apache-2.0 license"></a>
+</p>
 
 Commandment compiles one Go declaration into an immutable application. The same declarations drive execution, Help, completion, diagnostics, tooling, host integration, and tests.
 
-```text
-Definition -> Compile -> Application
-                            |
-                            +-> Run
-                            +-> Inspect
-                            +-> Complete
-                            +-> Schema
-                            +-> Reference
-                            +-> Help and version
-                            +-> shell integration
-                            `-> clitest
+## Install
+
+Commandment RC2 requires Go 1.27.1.
+
+```sh
+go get github.com/abstractionsinc/commandment@v1.0.0-rc.2
 ```
 
-Handlers and business logic remain ordinary Go.
+Starting a new project? Follow [Getting Started](docs/01-getting-started.md).
 
 ## Contents
 
@@ -52,6 +59,21 @@ Handlers and business logic remain ordinary Go.
 
 A useful Commandment program is ordinary Go. It has typed configuration, a declaration, a handler, one compile step, and a thin process entrypoint.
 
+```text
+Definition -> Compile -> Application
+                            |
+                            +-> Run
+                            +-> Inspect
+                            +-> Complete
+                            +-> Schema
+                            +-> Reference
+                            +-> Help and version
+                            +-> shell integration
+                            `-> clitest
+```
+
+Handlers and business logic remain ordinary Go.
+
 This `alienctl` command abducts a target. Beam strength can come from a default, the environment, or a flag. The accepted value must stay between `1` and `10`.
 
 ```go
@@ -71,34 +93,32 @@ type abductConfig struct {
 	DryRun       bool
 }
 
-func runAbduct(_ context.Context, config *abductConfig) error {
-	verb := "abducting"
-	if config.DryRun {
-		verb = "would abduct"
-	}
-	fmt.Printf("%s %s with beam strength %d\n", verb, config.Target, config.BeamStrength)
-	return nil
-}
-
 var definition = cli.Definition[struct{}]{
 	Name: "alienctl",
-	Declare: func(root *cli.CommandBuilder[struct{}]) {
-		command := cli.Command[abductConfig]{
+	Declare: func(cb *cli.CommandBuilder[struct{}]) {
+		cmd := cli.Command[abductConfig]{
 			Name: "abduct",
-			Declare: func(command *cli.CommandBuilder[abductConfig]) {
-				command.Arguments.String(&command.Config.Target, "target")
+			Declare: func(cb *cli.CommandBuilder[abductConfig]) {
+				cb.Arguments.String(&cb.Config.Target, "target")
 
-				beamStrength := command.Values.Int(&command.Config.BeamStrength)
-				command.Values.Default(beamStrength, 1)
-				command.Values.Environment(beamStrength, "ALIEN_BEAM_STRENGTH")
-				command.Flags.ValueFor(beamStrength).Long("beam-strength")
-				command.Rule.Between(beamStrength, 1, 10)
+				beamStrength := cb.Values.Int(&cb.Config.BeamStrength)
+				cb.Values.Default(beamStrength, 1)
+				cb.Values.Environment(beamStrength, "ALIEN_BEAM_STRENGTH")
+				cb.Flags.ValueFor(beamStrength).Long("beam-strength")
+				cb.Rule.Between(beamStrength, 1, 10)
 
-				command.Flags.Bool(&command.Config.DryRun).Long("dry-run")
+				cb.Flags.Bool(&cb.Config.DryRun).Long("dry-run")
 			},
-			Run: runAbduct,
+			Run: func(_ context.Context, config *abductConfig) error {
+				verb := "abducting"
+				if config.DryRun {
+					verb = "would abduct"
+				}
+				fmt.Printf("%s %s with beam strength %d\n", verb, config.Target, config.BeamStrength)
+				return nil
+			},
 		}
-		root.Subcommands.Command(command)
+		cb.Subcommands.Command(cmd)
 	},
 }
 
@@ -146,16 +166,16 @@ The handler never parses the flag, reads the environment, chooses which source w
 A Commandment value is not a flag field or an environment field. It is one typed destination that can receive contributions from several producers.
 
 ```go
-beamStrength := command.Values.Int(&command.Config.BeamStrength)
-command.Values.Default(beamStrength, 1)
-command.Values.Environment(beamStrength, "ALIEN_BEAM_STRENGTH")
-command.Flags.ValueFor(beamStrength).Long("beam-strength")
+beamStrength := cb.Values.Int(&cb.Config.BeamStrength)
+cb.Values.Default(beamStrength, 1)
+cb.Values.Environment(beamStrength, "ALIEN_BEAM_STRENGTH")
+cb.Flags.ValueFor(beamStrength).Long("beam-strength")
 ```
 
 The destination owns resolution. Application code reads one `int` regardless of where the winning contribution came from.
 
 ```go
-command.Values.ResolveWith(beamStrength, cli.Value.KeepLast())
+cb.Values.ResolveWith(beamStrength, cli.Value.KeepLast())
 ```
 
 Built-in resolution policies include `KeepFirst`, `KeepLast`, `RejectMultipleTiers`, and `CombineTiers`. Absence is also represented separately from a resolved Go zero value, so tools do not have to guess whether `0`, `""`, or `false` means "not supplied."
@@ -178,8 +198,8 @@ addressCodec := cli.ValueCodec[netip.Addr]{
 	Snapshot: cli.Value.Assign[netip.Addr](),
 }
 
-address := command.Values.Value(&command.Config.Address, addressCodec)
-command.Flags.ValueFor(address).Long("address")
+address := cb.Values.Value(&cb.Config.Address, addressCodec)
+cb.Flags.ValueFor(address).Long("address")
 ```
 
 ```console
@@ -203,9 +223,9 @@ declareApproaches := func(values *cli.ValueDomainBuilder[string]) {
 }
 
 approaches := cli.Value.Domain(cli.Value.Assign[string](), declareApproaches)
-approach := command.Values.Value(&command.Config.Approach, approaches)
-command.Values.Default(approach, "orbit")
-command.Flags.ValueFor(approach).Long("approach")
+approach := cb.Values.Value(&cb.Config.Approach, approaches)
+cb.Values.Default(approach, "orbit")
+cb.Flags.ValueFor(approach).Long("approach")
 ```
 
 ```console
@@ -231,9 +251,9 @@ declareSystems := func(values *cli.ValueDomainBuilder[string]) {
 }
 
 systems := cli.Value.Domain(cli.Value.Assign[string](), declareSystems)
-system := command.Values.Value(&command.Config.System, systems)
-command.Flags.ValueFor(system).Long("system")
-command.Rule.Require(system)
+system := cb.Values.Value(&cb.Config.System, systems)
+cb.Flags.ValueFor(system).Long("system")
+cb.Rule.Require(system)
 
 declareMoons := func(_ context.Context, _ *visitConfig, dependencies cli.Dependencies, domain *cli.ValueDomainBuilder[string]) error {
 	resolvedSystem, _ := dependencies.Get(system)
@@ -248,9 +268,9 @@ declareMoons := func(_ context.Context, _ *visitConfig, dependencies cli.Depende
 	return nil
 }
 
-moons := command.Values.Domain(declareMoons, system)
-moon := command.Values.Value(&command.Config.Moon, moons)
-command.Arguments.ValueFor(moon, "moon")
+moons := cb.Values.Domain(declareMoons, system)
+moon := cb.Values.Value(&cb.Config.Moon, moons)
+cb.Arguments.ValueFor(moon, "moon")
 ```
 
 ```console
@@ -280,7 +300,7 @@ deriveSummary := func(_ context.Context, _ *abductConfig, dependencies cli.Depen
 summary := cli.Value.ComputedBy(deriveSummary).
 	From(target, beamStrength)
 
-command.Values.Derive(&command.Config.Summary, summary)
+cb.Values.Derive(&cb.Config.Summary, summary)
 ```
 
 The handler receives the finished `Summary`. It does not need to reproduce the dependency or recompute the value after Commandment has already resolved the inputs.
@@ -292,23 +312,23 @@ The handler receives the finished `Summary`. It does not need to reproduce the d
 Mark the destination sensitive when the semantic value itself should be redacted from Commandment-owned presentation and observations.
 
 ```go
-token := command.Values.String(&command.Config.Token).Sensitive()
-command.Flags.ValueFor(token).Long("token")
+token := cb.Values.String(&cb.Config.Token).Sensitive()
+cb.Flags.ValueFor(token).Long("token")
 ```
 
 A single producer can be sensitive without making every producer for the destination sensitive.
 
 ```go
-token := command.Values.String(&command.Config.Token)
-command.Values.Environment(token, "ALIEN_TOKEN").Sensitive()
-command.Flags.ValueFor(token).Long("token")
+token := cb.Values.String(&cb.Config.Token)
+cb.Values.Environment(token, "ALIEN_TOKEN").Sensitive()
+cb.Flags.ValueFor(token).Long("token")
 ```
 
 Flag spellings and implicit or fixed values can carry the same producer-level sensitivity when that is the right owner.
 
 Sensitivity controls Commandment's presentation, provenance, and observation behavior. It is not encryption and it does not replace application authorization.
 
-[`Values and Resolution`](docs/04-values-and-resolution.md) covers producers, resolution tiers, value languages, domains, dependencies, provenance, sensitivity, and structured repair in full.
+[`Values and Configuration`](docs/04-values-and-configuration.md) covers producers, resolution, custom value languages, domains, derivation, provenance, and sensitivity in full.
 
 ## Shape the command language
 
@@ -317,29 +337,29 @@ Commandment treats commands, positional forms, flag spellings, aliases, shortcut
 ### Nested commands
 
 ```go
-fleet := cli.Command[struct{}]{
+fleetCmd := cli.Command[struct{}]{
 	Name: "fleet",
-	Declare: func(fleet *cli.CommandBuilder[struct{}]) {
-		status := cli.Command[struct{}]{
+	Declare: func(cb *cli.CommandBuilder[struct{}]) {
+		statusCmd := cli.Command[struct{}]{
 			Name: "status",
 			Run: func(context.Context, *struct{}) error {
 				fmt.Println("fleet status: 3 ships ready")
 				return nil
 			},
 		}
-		fleet.Subcommands.Command(status)
+		cb.Subcommands.Command(statusCmd)
 
-		launch := cli.Command[launchConfig]{
+		launchCmd := cli.Command[launchConfig]{
 			Name: "launch",
-			Declare: func(launch *cli.CommandBuilder[launchConfig]) {
-				launch.Arguments.String(&launch.Config.Ship, "ship")
+			Declare: func(cb *cli.CommandBuilder[launchConfig]) {
+				cb.Arguments.String(&cb.Config.Ship, "ship")
 			},
 			Run: runLaunch,
 		}
-		fleet.Subcommands.Command(launch)
+		cb.Subcommands.Command(launchCmd)
 	},
 }
-root.Subcommands.Command(fleet)
+cb.Subcommands.Command(fleetCmd)
 ```
 
 ```console
@@ -357,11 +377,11 @@ See [`commands/nested`](examples/commands/nested/).
 An alias is another spelling for the same command.
 
 ```go
-scan := cli.Command[scanConfig]{
+cmd := cli.Command[scanConfig]{
 	Name:    "scan",
 	Aliases: cli.Aliases("survey"),
-	Declare: func(scan *cli.CommandBuilder[scanConfig]) {
-		scan.Arguments.String(&scan.Config.World, "world")
+	Declare: func(cb *cli.CommandBuilder[scanConfig]) {
+		cb.Arguments.String(&cb.Config.World, "world")
 	},
 }
 ```
@@ -377,16 +397,16 @@ scanning mars
 A shortcut is a distinct entry that targets a canonical command and can contribute bounded input.
 
 ```go
-navigate := cli.Command[navigateConfig]{
+cmd := cli.Command[navigateConfig]{
 	Name: "navigate",
-	Declare: func(navigate *cli.CommandBuilder[navigateConfig]) {
-		navigate.Arguments.String(&navigate.Config.Destination, "destination")
+	Declare: func(cb *cli.CommandBuilder[navigateConfig]) {
+		cb.Arguments.String(&cb.Config.Destination, "destination")
 
-		home := cli.CommandShortcut{
+		shortcut := cli.CommandShortcut{
 			Name: "home",
 			Args: []string{"earth"},
 		}
-		navigate.Shortcut(home)
+		cb.Shortcut(shortcut)
 	},
 }
 ```
@@ -408,11 +428,11 @@ See [`commands/aliases`](examples/commands/aliases/) and [`commands/shortcuts`](
 A parent can select one immediate child when the user does not name a child explicitly.
 
 ```go
-status := cli.Command[struct{}]{
+cmd := cli.Command[struct{}]{
 	Name: "status",
 	Run:  runFleetStatus,
 }
-fleet.Subcommands.Command(status).Default()
+cb.Subcommands.Command(cmd).Default()
 ```
 
 ```console
@@ -434,11 +454,11 @@ See [`commands/default`](examples/commands/default/).
 Some commands really do accept more than one positional grammar.
 
 ```go
-navigate.Arguments.Form(func(form *cli.ArgumentFormBuilder[navigateConfig]) {
+cb.Arguments.Form(func(form *cli.ArgumentFormBuilder[navigateConfig]) {
 	form.String(&form.Config.World, "world")
 })
 
-navigate.Arguments.Form(func(form *cli.ArgumentFormBuilder[navigateConfig]) {
+cb.Arguments.Form(func(form *cli.ArgumentFormBuilder[navigateConfig]) {
 	form.Int(&form.Config.X, "x")
 	form.Int(&form.Config.Y, "y")
 	form.Int(&form.Config.Z, "z")
@@ -472,8 +492,8 @@ See [`arguments/forms`](examples/arguments/forms/) and [`arguments/optional`](ex
 A wrapper command can deliberately hand the rest of the command line to another consumer.
 
 ```go
-forwarded := relay.Values.Sequence(&relay.Config.Command, cli.Value.String())
-relay.Arguments.Form(func(form *cli.ArgumentFormBuilder[relayConfig]) {
+forwarded := cb.Values.Sequence(&cb.Config.Command, cli.Value.String())
+cb.Arguments.Form(func(form *cli.ArgumentFormBuilder[relayConfig]) {
 	form.String(&form.Config.Rover, "rover")
 	form.PassThrough(forwarded, "command", cli.Count.OneOrMore())
 })
@@ -493,10 +513,10 @@ See [`arguments/pass-through`](examples/arguments/pass-through/).
 One semantic flag can accept several spellings.
 
 ```go
-scanRange := scan.Flags.Int(&scan.Config.Range)
+scanRange := cb.Flags.Int(&cb.Config.Range)
 scanRange.Long("range")
 scanRange.Short('r')
-scan.Rule.Require(scanRange)
+cb.Rule.Require(scanRange)
 ```
 
 ```console
@@ -510,7 +530,7 @@ scanning mars at range 5
 Repeated counting flags are first-class too.
 
 ```go
-scan.Flags.Count(&scan.Config.Verbosity).Short('v')
+cb.Flags.Count(&cb.Config.Verbosity).Short('v')
 ```
 
 ```console
@@ -527,14 +547,14 @@ One command can expose mutually exclusive grammar variants selected by an early 
 ```go
 configureProfiles := func(cases *cli.GrammarProfileCases[transmitConfig, string]) {
 	cases.Case("brief", func(*cli.CommandBuilder[transmitConfig]) {})
-	cases.Case("verbose", func(transmit *cli.CommandBuilder[transmitConfig]) {
-		transmit.Flags.Bool(&transmit.Config.Verbose).
+	cases.Case("verbose", func(cb *cli.CommandBuilder[transmitConfig]) {
+		cb.Flags.Bool(&cb.Config.Verbose).
 			Occurrences(cli.Count.Optional()).
 			Long("verbose")
 	})
 }
 
-transmit.Profiles.Switch(profile, configureProfiles)
+cb.Profiles.Switch(profile, configureProfiles)
 ```
 
 The selected profile remains visible to analysis, completion, Schema, Reference, and tests. Use separate commands instead when the alternatives are really different operations rather than different grammar for one operation.
@@ -546,7 +566,7 @@ The selected profile remains visible to analysis, completion, Schema, Reference,
 For example, short flags do not cluster by default. A command that deliberately accepts clustered spellings can opt in.
 
 ```go
-scan.Dialect.ShortFlagClustering(cli.ShortFlagClusteringEnabled)
+cb.Dialect.ShortFlagClustering(cli.ShortFlagClusteringEnabled)
 ```
 
 ```console
@@ -558,7 +578,7 @@ The dialect also owns flag ordering, name matching and normalization, dashless s
 
 Changing dialect is a grammar decision. It changes what user input means, so the default should remain in place unless the CLI actually needs another recognition policy.
 
-[`Commands and Grammar`](docs/03-commands-and-grammar.md) covers the complete language model.
+[`Commands, Flags, and Arguments`](docs/03-commands-flags-and-arguments.md) covers the complete language model.
 
 ## Conditions, rules, diagnostics, and notices
 
@@ -569,13 +589,13 @@ A CLI should reject bad input before application code has to reason about it. Co
 `--cloak-level` only makes sense when stealth mode is enabled. It does not need to be accepted everywhere and rejected later in the handler.
 
 ```go
-stealth := approach.Flags.Bool(&approach.Config.Stealth).
+stealth := cb.Flags.Bool(&cb.Config.Stealth).
 	Occurrences(cli.Count.Optional())
 stealth.Long("stealth")
 
-cloakLevel := approach.Flags.Int(&approach.Config.CloakLevel)
+cloakLevel := cb.Flags.Int(&cb.Config.CloakLevel)
 cloakLevel.
-	AvailableWhen(approach.When.Equal(stealth, true)).
+	AvailableWhen(cb.When.Equal(stealth, true)).
 	Long("cloak-level")
 ```
 
@@ -599,10 +619,10 @@ See [`policies/conditions`](examples/policies/conditions/).
 Rules validate settled semantic values before the handler runs.
 
 ```go
-speed := approach.Flags.Int(&approach.Config.Speed)
+speed := cb.Flags.Int(&cb.Config.Speed)
 speed.Long("speed")
-approach.Rule.Require(speed)
-approach.Rule.Between(speed, 1, 5)
+cb.Rule.Require(speed)
+cb.Rule.Between(speed, 1, 5)
 ```
 
 The user gets a direct CLI error without application code formatting it.
@@ -713,8 +733,8 @@ advisory := cli.Advisory{
 	Message:  "reckless approach enabled",
 }
 
-approach.Advisory.
-	When(approach.When.Equal(reckless, true), advisory).
+cb.Advisory.
+	When(cb.When.Equal(reckless, true), advisory).
 	Subject(reckless)
 ```
 
@@ -742,8 +762,8 @@ approaching earth
 Notice suppression changes delivery without erasing the advisory that produced the notice.
 
 ```go
-approach.Notice.SuppressWhen(
-	approach.When.Equal(quiet, true),
+cb.Notice.SuppressWhen(
+	cb.When.Equal(quiet, true),
 	cli.NoticeMatch{
 		AdvisoryCode: advisory.Code,
 	},
@@ -757,7 +777,7 @@ approaching earth
 
 The advisory is still part of the semantic result. The matching notice is simply not delivered for that invocation.
 
-See [`policies/advisories`](examples/policies/advisories/) and [`Troubleshooting`](docs/11-troubleshooting.md).
+See [`policies/advisories`](examples/policies/advisories/) and [`Conditions, Validation, and Diagnostics`](docs/05-conditions-validation-and-diagnostics.md).
 
 ## Help that stays correct
 
@@ -797,7 +817,7 @@ Return the expedition home.
 The declarations behind that page are ordinary command metadata and grammar.
 
 ```go
-navigate := cli.Command[navigateConfig]{
+cmd := cli.Command[navigateConfig]{
 	Name:    "navigate",
 	Aliases: cli.Aliases("travel"),
 	Description: cli.Description{
@@ -809,18 +829,18 @@ navigate := cli.Command[navigateConfig]{
 			CommandLine: "alienctl navigate europa --approach=warp",
 		},
 	},
-	Declare: func(navigate *cli.CommandBuilder[navigateConfig]) {
-		navigate.Arguments.String(&navigate.Config.Destination, "destination").
+	Declare: func(cb *cli.CommandBuilder[navigateConfig]) {
+		cb.Arguments.String(&cb.Config.Destination, "destination").
 			Description("World or station to navigate to.")
 
-		home := cli.CommandShortcut{
+		shortcut := cli.CommandShortcut{
 			Name: "home",
 			Description: cli.Description{
 				Short: "Navigate directly to Earth.",
 			},
 			Args: []string{"earth"},
 		}
-		navigate.Shortcut(home)
+		cb.Shortcut(shortcut)
 	},
 }
 ```
@@ -879,7 +899,7 @@ See [`presentation/help`](examples/presentation/help/).
 Applications that need another presentation can replace the renderer without rebuilding command selection or Help semantics.
 
 ```go
-renderHelp := func(_ context.Context, page cli.HelpPage) (string, error) {
+func renderHelp(_ context.Context, page cli.HelpPage) (string, error) {
 	text := fmt.Sprintf(
 		"%s %s\n%s\n",
 		strings.ToUpper(page.ApplicationName),
@@ -931,7 +951,7 @@ $ ./alienctl --version
 Declarations can carry the release history of the CLI surface itself. A renamed flag can say when the old spelling became deprecated and identify the spelling that replaced it.
 
 ```go
-speed := approach.Flags.Int(&approach.Config.Speed).
+speed := cb.Flags.Int(&cb.Config.Speed).
 	Description("Set approach speed.")
 
 legacy := speed.Long("velocity").Release(cli.ReleaseLifecycle{
@@ -965,7 +985,7 @@ Global flags:
 
 Commandment provides semantic-version and explicit ordered release schemes. Version presentation, Help, inspection, Schema, Reference, and tests can all use the same release authority instead of learning release history independently.
 
-See [`presentation/version`](examples/presentation/version/) and [`Policy and Lifecycle`](docs/05-policy-and-lifecycle.md).
+See [`evolution/version`](examples/evolution/version/) and [`Evolving a CLI`](docs/08-evolving-a-cli.md).
 
 ## Localize presentation
 
@@ -1003,8 +1023,8 @@ var definition = cli.Definition[rootConfig]{
 The application then declares how the user selects the effective locale.
 
 ```go
-locale := root.Values.String(&root.Config.Locale)
-root.Flags.ValueFor(locale).
+locale := cb.Values.String(&cb.Config.Locale)
+cb.Flags.ValueFor(locale).
 	LocaleSelector().
 	Occurrences(cli.Count.Optional()).
 	Long("locale")
@@ -1040,7 +1060,7 @@ completeWorld := func(_ context.Context, _ *visitConfig, request cli.ValueComple
 	return contribution, nil
 }
 
-world := visit.Arguments.String(&visit.Config.World, "world")
+world := cb.Arguments.String(&cb.Config.World, "world")
 world.CompleteBy(completeWorld)
 ```
 
@@ -1068,7 +1088,7 @@ See [`completion/values`](examples/completion/values/).
 Files are often better completed by the shell or editor that already knows the local filesystem and its presentation conventions.
 
 ```go
-manifest := upload.Flags.String(&upload.Config.Manifest)
+manifest := cb.Flags.String(&cb.Config.Manifest)
 manifest.CompleteWith(cli.CompletionNativeFiles).Long("manifest")
 ```
 
@@ -1121,25 +1141,34 @@ Version-sensitive providers can also generate integration for an explicit target
 
 ### Add another shell
 
-Applications can replace or extend the built-in provider catalog.
+Applications can replace the built-in provider catalog with an exact catalog of their own. To extend the default six providers, list those providers together with the custom provider.
 
 ```go
-generateXonsh := func(generation cli.ShellCompletionGeneration) (string, error) {
-	return generateXonshScript(generation.ApplicationName), nil
+func generateXonsh(generation cli.ShellCompletionGeneration) (string, error) {
+	return renderXonshAdapter(generation)
 }
 
-xonsh := cli.Shell.Custom("xonsh", generateXonsh)
+var xonsh = cli.Shell.Custom("xonsh", generateXonsh)
 
 var definition = cli.Definition[struct{}]{
 	Name: "alienctl",
 	ShellCompletion: cli.ShellCompletion{
 		Shells: []cli.ShellCompletionProvider{
 			cli.Shell.Bash,
+			cli.Shell.Zsh,
+			cli.Shell.Fish,
+			cli.Shell.PowerShell,
+			cli.Shell.Elvish,
+			cli.Shell.Nushell,
 			xonsh,
 		},
 	},
 }
 ```
+
+A nil `Shells` slice selects the canonical six built-ins. A nonnil, nonempty slice is the entire catalog; Commandment does not append the defaults. A nonnil empty slice is invalid. Setting `Disabled` removes the intrinsic completion command and requires `Shells` to remain nil.
+
+`renderXonshAdapter` receives the application name, target version, and opaque activation environment/value needed to implement Commandment's shell completion adapter protocol. [`Completion`](docs/07-completion.md) owns that complete contract.
 
 The same intrinsic command can now generate the custom provider.
 
@@ -1148,9 +1177,9 @@ $ ./alienctl completion xonsh
 ...
 ```
 
-`Application.ShellCompletionScript` exposes the same provider catalog directly for hosts that want the generated artifact without running the intrinsic command.
+`Application.ShellCompletionScript` and `ShellCompletionScriptForVersion` generate directly from any valid provider passed by the caller. Direct generation is independent of whether that provider belongs to the Definition-owned intrinsic catalog.
 
-[`Operations and Presentation`](docs/07-operations-and-presentation.md) covers completion targets, candidate groups, matching, ranking, partial results, delegation, client capabilities, and shell generation in depth.
+[`Completion`](docs/07-completion.md) covers completion targets, candidate groups, matching, ranking, partial results, delegation, client capabilities, and shell generation in depth.
 
 ## Inspect and describe the application
 
@@ -1204,7 +1233,7 @@ source: flag
 
 The handler only needs the final `int`. Inspection retains enough structure for tooling to answer why that `int` won.
 
-See [`observations/inspect`](examples/observations/inspect/).
+See [`tooling/inspect`](examples/tooling/inspect/).
 
 ### Read the accepted static program
 
@@ -1228,7 +1257,7 @@ completion
 
 Schema includes static commands and entries, flags and spellings, argument forms, values, producers, environment inputs, conditions, rules, domains, providers, lifecycle, signals, and other accepted relationships. Dynamic provider results stay dynamic rather than being misrepresented as static structure.
 
-See [`observations/schema`](examples/observations/schema/).
+See [`Inspection and Tooling`](docs/11-inspection-and-tooling.md) for Schema as part of static analysis and tooling workflows.
 
 ### Build reference data
 
@@ -1256,7 +1285,7 @@ completion Generate shell completion source
 
 Use Schema when a consumer needs the accepted static semantic program. Use Reference when a consumer needs Commandment's reader-oriented static projection.
 
-See [`observations/reference`](examples/observations/reference/).
+See [`tooling/reference`](examples/tooling/reference/).
 
 Schema, Reference, Inspection, Completion, and Diagnostic reports are detached snapshots. Callers can retain or transform them without mutating the compiled application.
 
@@ -1331,7 +1360,7 @@ diagnostics.Require(
 
 Application behavior is still ordinary Go. Use normal `testing`, `errors.Is`, `errors.As`, subprocess tests, fuzzing, race tests, and application-specific assertions for facts that Commandment does not own.
 
-See [`Testing with clitest`](docs/08-testing-with-clitest.md).
+See [`Testing with clitest`](docs/12-testing-with-clitest.md).
 
 ## Test shell integrations with shelltest
 
@@ -1369,7 +1398,7 @@ That proof includes generated integration source, the shell process, quoting, ed
 
 Use `clitest.Complete` when the semantic completion result is the contract. Use `shelltest` when the shell integration itself is the contract.
 
-See [`Testing Shell Completion with shelltest`](docs/09-testing-shell-completion-with-shelltest.md) and the runnable [`completion/shell`](examples/completion/shell/) scenario.
+See [`Testing Shell Integrations with shelltest`](docs/13-testing-shell-integrations-with-shelltest.md) and the runnable [`completion/shell`](examples/completion/shell/) scenario.
 
 ## Benchmark Commandment applications with clibench
 
@@ -1388,7 +1417,7 @@ Helpers are available for `Compile`, `Run`, `Inspect`, `Complete`, `Schema`, and
 
 Go's `testing.B` still owns benchmark structure, sub-benchmarks, profiles, timing policy, statistics, and application-specific setup. Use a normal benchmark loop when process startup, fresh state, expected failures, custom concurrency, or application work belongs inside the measurement.
 
-See [`Benchmarking with clibench`](docs/10-benchmarking-with-clibench.md).
+See [`Benchmarking with clibench`](docs/14-benchmarking-with-clibench.md).
 
 ## Build commands from runtime data
 
@@ -1397,35 +1426,35 @@ Some command namespaces really are dynamic. An application may discover remote e
 `alienctl outpost` uses `--system` to decide which outpost command exists for the current invocation.
 
 ```go
-system := outpost.Flags.String(&outpost.Config.System)
+system := cb.Flags.String(&cb.Config.System)
 system.Long("system")
-outpost.Rule.Require(system)
+cb.Rule.Require(system)
 
 provideOutposts := func(_ context.Context, batch *cli.CommandBatch[outpostConfig]) error {
 	switch batch.Config.System {
 	case "jovian":
-		europa := cli.Command[struct{}]{
+		europaCmd := cli.Command[struct{}]{
 			Name: "europa",
 			Run: func(context.Context, *struct{}) error {
 				fmt.Println("contacting europa outpost")
 				return nil
 			},
 		}
-		batch.Command(europa)
+		batch.Command(europaCmd)
 	case "saturnian":
-		titan := cli.Command[struct{}]{
+		titanCmd := cli.Command[struct{}]{
 			Name: "titan",
 			Run: func(context.Context, *struct{}) error {
 				fmt.Println("contacting titan outpost")
 				return nil
 			},
 		}
-		batch.Command(titan)
+		batch.Command(titanCmd)
 	}
 	return nil
 }
 
-outpost.Subcommands.CommandsFrom(provideOutposts, system)
+cb.Subcommands.CommandsFrom(provideOutposts, system)
 ```
 
 ```console
@@ -1473,16 +1502,16 @@ func newStatusProgram() (cli.Definition[struct{}], cli.DefaultProvider) {
 	var ship cli.Destination[statusConfig, string]
 	definition := cli.Definition[struct{}]{
 		Name: "alienctl",
-		Declare: func(root *cli.CommandBuilder[struct{}]) {
-			status := cli.Command[statusConfig]{
+		Declare: func(cb *cli.CommandBuilder[struct{}]) {
+			cmd := cli.Command[statusConfig]{
 				Name: "status",
-				Declare: func(status *cli.CommandBuilder[statusConfig]) {
-					ship = status.Values.String(&status.Config.Ship)
-					status.Flags.ValueFor(ship).Long("ship")
+				Declare: func(cb *cli.CommandBuilder[statusConfig]) {
+					ship = cb.Values.String(&cb.Config.Ship)
+					cb.Flags.ValueFor(ship).Long("ship")
 				},
 				Run: runStatus,
 			}
-			root.Subcommands.Command(status)
+			cb.Subcommands.Command(cmd)
 		},
 	}
 
@@ -1526,16 +1555,16 @@ func newContactProgram() (cli.Definition[struct{}], cli.FactProvider) {
 	var ship cli.Destination[contactConfig, string]
 	definition := cli.Definition[struct{}]{
 		Name: "alienctl",
-		Declare: func(root *cli.CommandBuilder[struct{}]) {
-			contact := cli.Command[contactConfig]{
+		Declare: func(cb *cli.CommandBuilder[struct{}]) {
+			cmd := cli.Command[contactConfig]{
 				Name: "contact",
-				Declare: func(contact *cli.CommandBuilder[contactConfig]) {
-					ship = contact.Facts.Require(&contact.Config.Ship)
-					contact.Arguments.String(&contact.Config.Target, "target")
+				Declare: func(cb *cli.CommandBuilder[contactConfig]) {
+					ship = cb.Facts.Require(&cb.Config.Ship)
+					cb.Arguments.String(&cb.Config.Target, "target")
 				},
 				Run: runContact,
 			}
-			root.Subcommands.Command(contact)
+			cb.Subcommands.Command(cmd)
 		},
 	}
 
@@ -1578,11 +1607,11 @@ type scanConfig struct {
 	Output io.Writer
 }
 
-scan := cli.Command[scanConfig]{
+cmd := cli.Command[scanConfig]{
 	Name: "scan",
-	Declare: func(scan *cli.CommandBuilder[scanConfig]) {
-		scan.Arguments.String(&scan.Config.World, "world")
-		scan.Access.Stdout(&scan.Config.Output)
+	Declare: func(cb *cli.CommandBuilder[scanConfig]) {
+		cb.Arguments.String(&cb.Config.World, "world")
+		cb.Access.Stdout(&cb.Config.Output)
 	},
 	Run: func(_ context.Context, config *scanConfig) error {
 		_, err := fmt.Fprintf(config.Output, "scanning %s\n", config.World)
@@ -1593,12 +1622,12 @@ scan := cli.Command[scanConfig]{
 
 Execution access can also move an ancestor-owned resolved value into the selected command configuration without resolving it again.
 
-```go
-ship := root.Values.String(&root.Config.Ship)
-root.Values.Default(ship, "mothership")
-root.Flags.ValueFor(ship).Long("ship")
+Given an ancestor-owned `ship` destination, the selected child binds that settled value into its own configuration.
 
-scan.Access.Value(ship, &scan.Config.Ship)
+```go
+Declare: func(cb *cli.CommandBuilder[scanConfig]) {
+	cb.Access.Value(ship, &cb.Config.Ship)
+}
 ```
 
 Command selection, value state, effective locale, working directory, stdin, stdout, and stderr use the same explicit access model where applicable.
@@ -1619,7 +1648,7 @@ func scanMiddleware(ctx context.Context, config *scanConfig, next cli.Middleware
 	return err
 }
 
-scan := cli.Command[scanConfig]{
+cmd := cli.Command[scanConfig]{
 	Name:       "scan",
 	Middleware: []cli.Middleware[scanConfig]{scanMiddleware},
 	Run:        runScan,
@@ -1686,7 +1715,7 @@ err := app.Run(ctx, request)
 
 That boundary supports embedded applications, alternate process adapters, daemon hosts, and explicit capability ownership without making the compiled application a global singleton.
 
-See [`Host Integration and Execution`](docs/06-host-integration-and-execution.md).
+See [`Runtime and Host Integration`](docs/09-runtime-and-host-integration.md).
 
 ## Response files
 
@@ -1695,8 +1724,8 @@ Response files let users move arguments into another input source while preservi
 Enable response-file recognition in the command dialect.
 
 ```go
-root.Dialect.ResponseFiles(true)
-root.Arguments.String(&root.Config.Name, "name")
+cb.Dialect.ResponseFiles(true)
+cb.Arguments.String(&cb.Config.Name, "name")
 ```
 
 If `crew.args` contains
@@ -1761,19 +1790,19 @@ type listenConfig struct {
 	Events <-chan cli.SignalEvent
 }
 
-listen := cli.Command[listenConfig]{
+cmd := cli.Command[listenConfig]{
 	Name: "listen",
-	Declare: func(listen *cli.CommandBuilder[listenConfig]) {
-		events := listen.Signals.Endpoint(&listen.Config.Events)
-		interrupt := listen.Signals.Match.
+	Declare: func(cb *cli.CommandBuilder[listenConfig]) {
+		events := cb.Signals.Endpoint(&cb.Config.Events)
+		interrupt := cb.Signals.Match.
 			Interrupt().
 			During(cli.SignalPhaseExecution).
 			Each().
 			Hint("interrupt")
 
-		listen.Signals.Policy(
+		cb.Signals.Policy(
 			interrupt,
-			listen.Signals.Action.Emit(events),
+			cb.Signals.Action.Emit(events),
 		)
 	},
 	Run: func(ctx context.Context, config *listenConfig) error {
@@ -1819,21 +1848,21 @@ source := cli.SignalSource[string]{
 	Open:    openAlarm,
 }
 
-registered := root.Signals.Source(source)
+registered := cb.Signals.Source(source)
 alarm := registered.Signal("alarm")
 ```
 
 A command can route the custom signal through the same policy and endpoint model.
 
 ```go
-events := watch.Signals.Endpoint(&watch.Config.Events)
-match := watch.Signals.Match.
+events := cb.Signals.Endpoint(&cb.Config.Events)
+match := cb.Signals.Match.
 	On(alarm).
 	During(cli.SignalPhaseExecution).
 	Each().
 	Hint("alarm")
 
-watch.Signals.Policy(match, watch.Signals.Action.Emit(events))
+cb.Signals.Policy(match, cb.Signals.Action.Emit(events))
 ```
 
 ```console
@@ -1852,7 +1881,7 @@ Signal policies are not limited to endpoint emission. Action plans can ignore a 
 Actions can be sequenced.
 
 ```go
-plan := command.Signals.Action.
+plan := cb.Signals.Action.
 	Emit(events).
 	ThenCancel()
 ```
@@ -1860,7 +1889,7 @@ plan := command.Signals.Action.
 A sequence can also declare delayed escalation.
 
 ```go
-plan := command.Signals.Action.
+plan := cb.Signals.Action.
 	Handle(beginGracefulShutdown).
 	After(5 * time.Second).
 	Abort(1)
@@ -1868,7 +1897,7 @@ plan := command.Signals.Action.
 
 That makes signal behavior part of the command's semantics instead of a collection of unrelated goroutines and process hooks. Inspection, Schema, diagnostics, and `clitest` can observe the same declared policy.
 
-[`Host Integration and Execution`](docs/06-host-integration-and-execution.md) covers source identity, sender metadata, delivery fidelity, phases, selection, aggregation, action sequencing, endpoints, forwarding, cancellation, reraising, and failure behavior.
+[`Signals`](docs/10-signals.md) covers source identity, sender metadata, delivery fidelity, phases, selection, aggregation, action sequencing, endpoints, forwarding, cancellation, reraising, and failure behavior.
 
 ## Scale the source
 
@@ -1877,24 +1906,22 @@ A larger Commandment application can use ordinary Go package ownership. It does 
 A repository might grow into a shape like this.
 
 ```text
-cmd/alienctl/
-    main.go
+main.go
 
-internal/fleet/
-    command.go
-    run.go
-    run_test.go
-
-internal/worlds/
-    command.go
-    provider.go
-
-internal/host/
-    facts.go
-    services.go
-
-app.go
-app_test.go
+internal/
+    program/
+        program.go
+        program_test.go
+    fleet/
+        command.go
+        run.go
+        run_test.go
+    worlds/
+        command.go
+        provider.go
+    host/
+        facts.go
+        services.go
 ```
 
 The exact file names are not important. The useful properties are.
@@ -1910,9 +1937,9 @@ The exact file names are not important. The useful properties are.
 - Tooling consumes the compiled application instead of maintaining another registry.
 - Application behavior uses ordinary Go tests, Commandment semantics use `clitest`, and real shell integrations use `shelltest`.
 
-[`Building Large Applications`](docs/12-building-large-applications.md) covers package ownership, extraction, static and dynamic structure, host integration, and testing at application scale.
+[`Building Large Applications`](docs/16-building-large-applications.md) covers package ownership, extraction, static and dynamic structure, host integration, and testing at application scale.
 
-[`Adopting Commandment`](docs/13-adopting-commandment.md) applies the same model to existing CLIs where grammar, configuration behavior, Help, completion, errors, and other observable contracts already matter.
+[`Adopting Commandment`](docs/17-adopting-commandment.md) applies the same model to existing CLIs where grammar, configuration behavior, Help, completion, errors, and other observable contracts already matter.
 
 ## When Commandment fits
 
@@ -1949,24 +1976,28 @@ Commandment stops at the CLI boundary. Persistence, network clients, databases, 
 
 ## Start building
 
-Commandment is currently RC2 before `v1.0.0`. The module requires Go 1.27.1. This source snapshot has no release tag, so the public guides use an exact local checkout rather than pretending a stable module version already exists.
+Commandment RC2 is `v1.0.0-rc.2` and requires Go 1.27.1. The stable `v1.0.0` compatibility baseline has not been published yet.
 
 Start with [`Getting Started`](docs/01-getting-started.md) for the complete cold-start path.
 
 Continue with the guide that matches the problem you are solving.
 
-- [`Commandment Guide`](docs/02-commandment-guide.md) explains the mental model and declaration lifetime.
-- [`Commands and Grammar`](docs/03-commands-and-grammar.md) covers commands, entries, positional forms, profiles, dialect, token ownership, and providers.
-- [`Values and Resolution`](docs/04-values-and-resolution.md) covers producers, tiers, languages, domains, dependencies, provenance, sensitivity, and repair.
-- [`Policy and Lifecycle`](docs/05-policy-and-lifecycle.md) covers conditions, availability, visibility, rules, advisories, notices, lifecycle, and replacement.
-- [`Host Integration and Execution`](docs/06-host-integration-and-execution.md) covers `Run`, host context, access, middleware, response files, signals, and application errors.
-- [`Operations and Presentation`](docs/07-operations-and-presentation.md) covers Inspect, Complete, Schema, Reference, Diagnostics, Help, localization, version, and shell integration.
-- [`Testing with clitest`](docs/08-testing-with-clitest.md) covers semantic testing of Commandment applications.
-- [`Testing Shell Completion with shelltest`](docs/09-testing-shell-completion-with-shelltest.md) covers real shell and editor integration tests.
-- [`Benchmarking with clibench`](docs/10-benchmarking-with-clibench.md) covers the benchmark helpers.
-- [`Troubleshooting`](docs/11-troubleshooting.md) starts from structured observations when something behaves unexpectedly.
-- [`Building Large Applications`](docs/12-building-large-applications.md) covers application-scale composition.
-- [`Adopting Commandment`](docs/13-adopting-commandment.md) covers migration of an existing CLI.
+- [`How Commandment Works`](docs/02-how-commandment-works.md) explains the mental model and declaration lifetime.
+- [`Commands, Flags, and Arguments`](docs/03-commands-flags-and-arguments.md) covers commands, entries, positional forms, profiles, dialect, token ownership, and providers.
+- [`Values and Configuration`](docs/04-values-and-configuration.md) covers producers, resolution, custom value languages, domains, derivation, provenance, and sensitivity.
+- [`Conditions, Validation, and Diagnostics`](docs/05-conditions-validation-and-diagnostics.md) covers conditions, availability, rules, diagnostics, repairs, advisories, and notices.
+- [`Help and Localization`](docs/06-help-and-localization.md) covers default and custom Help, presentation ownership, translation bundles, and locale selection.
+- [`Completion`](docs/07-completion.md) covers semantic completion, native delegation, built-in shell integration, and custom providers.
+- [`Evolving a CLI`](docs/08-evolving-a-cli.md) covers release authority, lifecycle, replacement, compatibility syntax, and version presentation.
+- [`Runtime and Host Integration`](docs/09-runtime-and-host-integration.md) covers `Run`, host context, access, middleware, response files, and application errors.
+- [`Signals`](docs/10-signals.md) covers operating-system and application-defined signal sources, policies, actions, and escalation.
+- [`Inspection and Tooling`](docs/11-inspection-and-tooling.md) covers Inspect, Schema, Reference, provenance tooling, and detached public observations.
+- [`Testing with clitest`](docs/12-testing-with-clitest.md) covers semantic testing of Commandment applications.
+- [`Testing Shell Integrations with shelltest`](docs/13-testing-shell-integrations-with-shelltest.md) covers real shell and editor integration tests.
+- [`Benchmarking with clibench`](docs/14-benchmarking-with-clibench.md) covers the benchmark helpers.
+- [`Troubleshooting`](docs/15-troubleshooting.md) starts from symptoms and routes to the public observation that owns the result.
+- [`Building Large Applications`](docs/16-building-large-applications.md) covers application-scale composition.
+- [`Adopting Commandment`](docs/17-adopting-commandment.md) covers migration of an existing CLI.
 - [`examples/`](examples/README.md) contains focused runnable `alienctl` programs.
 - GoDoc owns exact API contracts.
 

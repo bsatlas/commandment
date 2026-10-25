@@ -32,10 +32,11 @@ func newProgram() (cli.Definition[struct{}], cli.FactProvider) {
 			cb.Subcommands.Command(cmd)
 		},
 	}
-	facts := cli.FactsFor[contactConfig](func(_ context.Context, supply *cli.FactSupply[contactConfig]) error {
+	supplyFacts := func(_ context.Context, supply *cli.FactSupply[contactConfig]) error {
 		supply.Set(ship, "mothership")
 		return nil
-	})
+	}
+	facts := cli.FactsFor[contactConfig](supplyFacts)
 	return definition, facts
 }
 

@@ -27,7 +27,7 @@ var definition = cli.Definition[struct{}]{
 				cb.Flags.ValueFor(system).Long("system")
 				cb.Rule.Require(system)
 
-				moons := cb.Values.Domain(func(_ context.Context, _ *visitConfig, dependencies cli.Dependencies, domain *cli.ValueDomainBuilder[string]) error {
+				declareMoons := func(_ context.Context, _ *visitConfig, dependencies cli.Dependencies, domain *cli.ValueDomainBuilder[string]) error {
 					resolvedSystem, _ := dependencies.Get(system)
 					switch resolvedSystem {
 					case "jovian":
@@ -38,7 +38,8 @@ var definition = cli.Definition[struct{}]{
 						domain.Value("enceladus", "enceladus")
 					}
 					return nil
-				}, system)
+				}
+				moons := cb.Values.Domain(declareMoons, system)
 				moon := cb.Values.Value(&cb.Config.Moon, moons)
 				cb.Arguments.ValueFor(moon, "moon")
 			},

@@ -358,8 +358,16 @@ const (
 )
 
 // ShellCompletion configures the Definition-owned public shell-completion exporter.
-// The zero value enables the six built-in providers in canonical order. Disabled is
-// the sole disabled representation and requires Shells to be nil.
+// The zero value enables Bash, Zsh, Fish, PowerShell, Elvish, and Nushell in that
+// canonical order. When Shells is nonnil, it is the complete authoritative catalog,
+// must be nonempty, and defaults are not appended. Entries must be nonnil valid
+// providers with unique exact names. Custom names are opaque and must be nonempty valid
+// UTF-8, must not begin with "-", and must not contain NUL, CR, LF, Unicode whitespace,
+// or Unicode control characters; names are neither case-folded nor Unicode-normalized.
+// To replace a built-in, omit that built-in and provide a custom provider with the same
+// exact name; duplicate names are invalid. Disabled is the sole disabled representation,
+// removes the intrinsic completion command, and requires Shells to be nil. Direct
+// generation through Application remains available independently of this catalog.
 type ShellCompletion struct {
 	Disabled bool
 	Shells   []ShellCompletionProvider
@@ -371,10 +379,15 @@ type ShellCompletion struct {
 type ShellCompletionProvider func() shellCompletionDescriptor
 
 // ShellCompletionGenerator generates one shell completion integration source artifact.
+// A generator retained by a compiled descriptor must be deterministic for the same
+// generation value and safe for concurrent calls.
 type ShellCompletionGenerator func(ShellCompletionGeneration) (string, error)
 
 // ShellCompletionGeneration is the complete public generation context available
-// to built-in and custom shell providers.
+// to built-in and custom shell providers. TargetVersion selects artifact syntax
+// only and is never the discovered runtime shell version. ActivationEnvironment
+// and ActivationValue are opaque process-adapter activation values that generated
+// source must embed verbatim.
 type ShellCompletionGeneration struct {
 	ApplicationName       string
 	TargetVersion         string
@@ -424,8 +437,11 @@ func (shellNamespace) Nushell() shellCompletionDescriptor {
 	return builtInShellCompletionDescriptor(ShellFamilyNushell, true)
 }
 
-// Custom returns a provider for name backed by generator. Invalid names or a nil
-// generator produce an invalid provider that Compile/direct generation rejects.
+// Custom returns a provider for the exact opaque catalog name backed by generator.
+// The name must be nonempty valid UTF-8, must not begin with "-", and must not contain
+// NUL, CR, LF, Unicode whitespace, or Unicode control characters. Names are neither
+// case-folded nor Unicode-normalized. An invalid name or nil generator produces an
+// invalid provider that Compile and direct generation reject.
 func (shellNamespace) Custom(name string, generator ShellCompletionGenerator) ShellCompletionProvider {
 	if !validShellCompletionProviderName(name) || generator == nil {
 		return func() shellCompletionDescriptor { return shellCompletionDescriptor{} }

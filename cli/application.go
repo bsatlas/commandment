@@ -61,7 +61,9 @@ func (app Application) Complete(ctx context.Context, request CompletionRequest) 
 	return result, err
 }
 
-// ShellCompletionScript returns the generated source artifact for shell.
+// ShellCompletionScript returns the canonical generated source artifact for shell with
+// an empty ShellCompletionGeneration.TargetVersion. The provider need not belong to the
+// Definition-owned shell-completion catalog.
 func (app Application) ShellCompletionScript(shell ShellCompletionProvider) (string, error) {
 	if shell == nil {
 		return "", errInvalidShellCompletionProvider
@@ -70,7 +72,12 @@ func (app Application) ShellCompletionScript(shell ShellCompletionProvider) (str
 	return generateShellCompletionScript(model.Application().name, shell(), "")
 }
 
-// ShellCompletionScriptForVersion returns the generated source artifact targeting a specific shell syntax version.
+// ShellCompletionScriptForVersion returns the generated source artifact targeting a
+// nonempty shell syntax version. The provider need not belong to the Definition-owned
+// shell-completion catalog. Version-insensitive built-ins reject a target instead of
+// ignoring it. Version-sensitive built-ins interpret the target according to their
+// documented support contract. Custom generators receive version verbatim as
+// ShellCompletionGeneration.TargetVersion and own its interpretation and validation.
 func (app Application) ShellCompletionScriptForVersion(shell ShellCompletionProvider, version string) (string, error) {
 	if shell == nil || version == "" {
 		return "", errInvalidShellCompletionProvider

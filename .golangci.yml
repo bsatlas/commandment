@@ -158,6 +158,13 @@ linters:
         linters:
           - forbidigo
 
+      # Public examples model ordinary application-owned error wrapping. The
+      # Commandment-internal structured-error construction law does not apply to
+      # consumer code merely because it lives in this repository.
+      - path: ^examples/[^/]+/[^/]+/main\.go$
+        source: '\bfmt\.Errorf\('
+        linters: [forbidigo]
+
       # The interrupt example re-executes the exact current test binary so it can
       # receive a real process signal without invoking the Go toolchain from a test.
       - path: ^examples/signals/interrupt/main_test\.go$

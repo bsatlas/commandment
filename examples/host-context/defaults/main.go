@@ -31,10 +31,11 @@ func newProgram() (cli.Definition[struct{}], cli.DefaultProvider) {
 			cb.Subcommands.Command(cmd)
 		},
 	}
-	defaults := cli.DefaultsFor[statusConfig](func(_ context.Context, supply *cli.DefaultSupply[statusConfig]) error {
+	supplyDefault := func(_ context.Context, supply *cli.DefaultSupply[statusConfig]) error {
 		supply.Set(ship, "scout-7")
 		return nil
-	})
+	}
+	defaults := cli.DefaultsFor[statusConfig](supplyDefault)
 	return definition, defaults
 }
 

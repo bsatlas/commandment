@@ -12,11 +12,11 @@ func ExampleSchemaResult_Require() {
 		t.Helper()
 
 		definition := cli.Definition[struct{}]{
-			Name: "tool",
+			Name: "alienctl",
 		}
 		app := clitest.Compile(t, definition)
 		clitest.Schema(app).Require(t,
-			clitest.RootCommand().Name("tool"),
+			clitest.RootCommand().Name("alienctl"),
 		)
 	}
 

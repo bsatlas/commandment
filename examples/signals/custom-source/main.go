@@ -63,7 +63,7 @@ var definition = cli.Definition[struct{}]{
 				select {
 				case <-cfg.Events:
 					if _, err := fmt.Fprintln(cfg.Output, "received alarm"); err != nil {
-						return err //nolint:wrapcheck // Preserve the writer error at the application boundary.
+						return fmt.Errorf("write signal output: %w", err)
 					}
 					return nil
 				case <-ctx.Done():

@@ -1,8 +1,7 @@
 # Presentation
 
-Help presentation, localization, and version output.
+Project the accepted CLI model into Help and localized application text.
 
 - [Default help](help/) - Present rich built-in Help for a realistic CLI.
-- [Custom help](custom-help/) - Render help with your own output format.
-- [Localization](localization/) - Translate help text without duplicating command structure.
-- [Version](version/) - Show the application release with `--version`.
+- [Custom help](custom-help/) - Render Help with your own output format.
+- [Localization](localization/) - Translate presentation text without duplicating command structure.

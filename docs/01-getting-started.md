@@ -11,17 +11,16 @@ would abduct cow with beam strength 4
 
 ## Prepare an empty module
 
-Commandment requires Go 1.27.1 and is pre-v1. This source snapshot has no release tag, so use an exact local checkout for now.
+Commandment RC2 is `v1.0.0-rc.2` and requires Go 1.27.1. Start from an empty directory and install that exact release candidate.
 
 ```sh
 mkdir alienctl
 cd alienctl
-go mod init example.com/alienctl
-go mod edit -require=github.com/abstractionsinc/commandment@v0.0.0
-go mod edit -replace=github.com/abstractionsinc/commandment=/absolute/path/to/commandment
+go mod init alienctl
+go get github.com/abstractionsinc/commandment@v1.0.0-rc.2
 ```
 
-Replace `/absolute/path/to/commandment` with the absolute path of this repository's Commandment module. Remove the local `replace` and use an exact tag once a release is published.
+You do not need a Commandment source checkout to build an application with RC2.
 
 ## Get a command running
 
@@ -172,4 +171,4 @@ The test compiles the same `definition` and asks the public `Inspect` operation 
 
 One declaration now owns the command grammar, the `BeamStrength` destination, its three producers, the range rule, and the handler. The compiled application uses that same model for execution and inspection, while `clitest` proves the semantic result without maintaining another parser or precedence model.
 
-Continue with the [Commandment Guide](02-commandment-guide.md) for declaration lifetime, static and invocation-time state, operation boundaries, and the rest of the programming model. Use the [examples corpus](../examples/README.md) when you want a complete runnable scenario for one focused capability.
+Continue with the [How Commandment Works](02-how-commandment-works.md) for declaration lifetime, static and invocation-time state, operation boundaries, and the programming model underneath the first application. Use the [examples corpus](../examples/README.md) when you want a complete runnable scenario for one focused capability.

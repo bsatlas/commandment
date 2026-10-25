@@ -11,13 +11,14 @@ type exampleVerboseConfig struct{ Verbose bool }
 
 func ExampleCompile() {
 	run := false
-	app, err := cli.Compile(cli.Definition[struct{}]{
-		Name: "tool",
+	definition := cli.Definition[struct{}]{
+		Name: "alienctl",
 		Run: func(context.Context, *struct{}) error {
 			run = true
 			return nil
 		},
-	})
+	}
+	app, err := cli.Compile(definition)
 	if err != nil {
 		panic(err)
 	}
@@ -30,9 +31,10 @@ func ExampleCompile() {
 }
 
 func ExampleApplication_Schema() {
-	app, err := cli.Compile(cli.Definition[struct{}]{
-		Name: "tool",
-	})
+	definition := cli.Definition[struct{}]{
+		Name: "alienctl",
+	}
+	app, err := cli.Compile(definition)
 	if err != nil {
 		panic(err)
 	}
@@ -44,9 +46,9 @@ func ExampleApplication_Schema() {
 func ExampleCommandBuilder() {
 	type config = exampleVerboseConfig
 	definition := cli.Definition[config]{
-		Name: "tool",
-		Declare: func(root *cli.CommandBuilder[config]) {
-			root.Flags.Bool(&root.Config.Verbose).Long("verbose")
+		Name: "alienctl",
+		Declare: func(cb *cli.CommandBuilder[config]) {
+			cb.Flags.Bool(&cb.Config.Verbose).Long("verbose")
 		},
 		Run: func(_ context.Context, cfg *config) error {
 			fmt.Println(cfg.Verbose)
@@ -57,9 +59,10 @@ func ExampleCommandBuilder() {
 	if err != nil {
 		panic(err)
 	}
-	if err := app.Run(context.Background(), cli.RunRequest{
+	request := cli.RunRequest{
 		Args: []string{"--verbose"},
-	}); err != nil {
+	}
+	if err := app.Run(context.Background(), request); err != nil {
 		panic(err)
 	}
 
